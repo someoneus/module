@@ -1,1 +1,215 @@
+print([[
+fps locker v1 :)
 
+automatic unlag if you open roblox menu
+]])
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
+local CoreGui = game:GetService('CoreGui')
+-- Build UI
+local ScreenGui   = Instance.new("ScreenGui")
+local Frame       = Instance.new("Frame")
+local UIGradient  = Instance.new("UIGradient")
+local UICorner    = Instance.new("UICorner")
+local Container   = Instance.new("Frame")
+local UICorner2   = Instance.new("UICorner")
+local TitleLabel  = Instance.new("TextLabel")
+local input       = Instance.new("TextBox")
+local button      = Instance.new("TextButton")
+local button1      = Instance.new("TextButton")
+local Label       = Instance.new("TextLabel")
+
+ScreenGui.Parent = CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+Frame.Parent = ScreenGui
+Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Frame.BackgroundColor3 = Color3.fromRGB(137, 52, 255)
+Frame.BorderSizePixel = 0
+Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+Frame.Size = UDim2.new(0, 150, 0, 200)
+UIGradient.Color = ColorSequence.new(Color3.new(1,1,1), Color3.fromRGB(172,89,255))
+UIGradient.Rotation = 45
+UIGradient.Parent = Frame
+UICorner.CornerRadius = UDim.new(0.1, 0)
+UICorner.Parent = Frame
+
+Container.Parent = Frame
+Container.AnchorPoint = Vector2.new(0.5,0.5)
+Container.BackgroundColor3 = Color3.fromRGB(62, 62, 62)
+Container.BorderSizePixel = 0
+Container.Position = UDim2.new(0.5, 0, 0.5, 0)
+Container.Size = UDim2.new(0.90, 0, 0.9, 0)
+UICorner2.CornerRadius = UDim.new(0.1, 0)
+UICorner2.Parent = Container
+
+TitleLabel.Parent = Container
+TitleLabel.Size = UDim2.new(1,0,0.2,0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Font = Enum.Font.Arial
+TitleLabel.Text = "FPS Locker :)"
+TitleLabel.TextScaled = true
+TitleLabel.TextWrapped = true
+
+input.Name = "input"
+input.Parent = Container
+input.Size = UDim2.new(1,0,0.2,0)
+input.Position = UDim2.new(0,0,0.2,0)
+input.BackgroundTransparency = 1
+input.PlaceholderText = "enter fps limit"
+input.Text = "60"
+input.TextScaled = true
+input.TextWrapped = true
+
+button.Name = "button"
+button.Parent = Container
+button.Size = UDim2.new(1,0,0.2,0)
+button.Position = UDim2.new(0,0,0.4,0)
+button.BackgroundTransparency = 1
+button.Text = "OFF"
+button.TextScaled = true
+button.TextWrapped = true
+
+button1.Name = "button"
+button1.Parent = Container
+button1.Size = UDim2.new(1,0,0.2,0)
+button1.Position = UDim2.new(0,0,0.8,0)
+button1.BackgroundTransparency = 1
+button1.Text = "exit"
+button1.TextScaled = true
+button1.TextWrapped = true
+
+Label.Name = "Label"
+Label.Parent = Container
+Label.Size = UDim2.new(1,0,0.2,0)
+Label.Position = UDim2.new(0,0,0.6,0)
+Label.BackgroundTransparency = 1
+Label.Text = "nil"
+Label.TextScaled = true
+Label.TextWrapped = true
+
+-- State
+local enabled = false
+local capValue = 60
+local lastFrameTime = tick()
+local hsv = 0
+
+-- Make all text rainbow
+local function updateRainbow()
+	hsv = (hsv + 0.001) % 1
+	local c = Color3.fromHSV(hsv, 1, 1)
+	TitleLabel.TextColor3 = c
+	input.TextColor3      = c
+	button.TextColor3     = c
+	Label.TextColor3      = c
+	button1.TextColor3    = c
+end
+
+local connection
+--// FPS label
+task.spawn(function()
+	connection = RunService.RenderStepped:Connect(function(delta)
+		Label.Text = math.floor((1/delta)+0.5)
+		task.wait(.01)
+	end)
+end)
+
+--// Safe mode
+GuiService.MenuOpened:Connect(function()
+	enabled = false button.Text = enabled and "ON" or "OFF"
+end)
+
+-- FPS capper (busy-wait)
+RunService:BindToRenderStep("FPSCap", Enum.RenderPriority.Last.Value, function()
+	local now = tick()
+	local elapsed = now - lastFrameTime
+
+	local currentFPS = 1 / elapsed
+
+	if enabled then
+		local targetDelta = 1 / capValue
+		local waitTime = targetDelta - elapsed
+		if waitTime > 0 then
+			local goal = now + waitTime
+			repeat until tick() >= goal
+			lastFrameTime = goal
+		else
+			lastFrameTime = now
+		end
+	else
+		lastFrameTime = now
+	end
+end)
+
+-- Rainbow updater
+RunService:BindToRenderStep("Rainbow", Enum.RenderPriority.First.Value, function()
+	updateRainbow()
+end)
+
+-- Input: change cap
+input.FocusLost:Connect(function()
+	local v = tonumber(input.Text)
+	if v and v > 0 then
+		capValue = v
+	else
+		capValue = 60
+		input.Text = "60"
+	end
+end)
+
+-- Toggle on/off
+button.Activated:Connect(function()
+	enabled = not enabled
+	button.Text = enabled and "ON" or "OFF"
+	lastFrameTime = tick()  -- reset timer
+end)
+
+--// exit
+button1.Activated:Connect(function()
+	RunService:UnbindFromRenderStep("Rainbow")
+	connection:Disconnect()
+	RunService:UnbindFromRenderStep("FPSCap")
+	ScreenGui:Destroy()
+end)
+
+-- Simple drag system
+do
+	local dragging, dragInput, dragStart, startPos
+
+	local function update(input)
+		local delta = input.Position - dragStart
+		Frame.Position = UDim2.new(
+			startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y
+		)
+	end
+
+	Frame.InputBegan:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = inp.Position
+			startPos = Frame.Position
+			inp.Changed:Connect(function()
+				if inp.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	Frame.InputChanged:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseMovement then
+			dragInput = inp
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(inp)
+		if inp == dragInput and dragging then
+			update(inp)
+		end
+	end)
+end
