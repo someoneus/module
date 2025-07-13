@@ -176,9 +176,12 @@ button1.Activated:Connect(function()
 	ScreenGui:Destroy()
 end)
 
--- Simple drag system
+-- Mobile + PC drag system
 do
-	local dragging, dragInput, dragStart, startPos
+	local dragging = false
+	local dragInput = nil
+	local dragStart = nil
+	local startPos = nil
 
 	local function update(input)
 		local delta = input.Position - dragStart
@@ -189,10 +192,11 @@ do
 	end
 
 	Frame.InputBegan:Connect(function(inp)
-		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
 			dragStart = inp.Position
 			startPos = Frame.Position
+			dragInput = inp
 			inp.Changed:Connect(function()
 				if inp.UserInputState == Enum.UserInputState.End then
 					dragging = false
@@ -202,7 +206,7 @@ do
 	end)
 
 	Frame.InputChanged:Connect(function(inp)
-		if inp.UserInputType == Enum.UserInputType.MouseMovement then
+		if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
 			dragInput = inp
 		end
 	end)
